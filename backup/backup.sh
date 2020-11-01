@@ -1,8 +1,32 @@
-#!/bin/bash
+#!/bin/bash -e
 echo "Moving to Nextcloud directory"
 
+########## Start user configurable variables #########
+# Adjust these variables to fit your needs
+
+# docker-compose.yml directory
+dcd="/nextcloud/docker-compose/yml/location"
+
+# I'm using linuxserver.io's Nextcloud container with ``/data`` and ``/config``
+# persistent volumes. Nextcloud folders to backup:
+backup_files="/location/of/docker/nextcloud/data"
+backup_files_2="/location/of/docker/nextcloud/appdata"
+
+# Backup destination (adjust as needed):
+dest="/location/of/backups/nextcloud"
+
+# Backup file name date format
+now=$(date +"%m_%d_%Y")
+
+# Database backup file name
+db_backup="nextcloud-db_$now.sql"
+
+# Nextcloud backup file name
+nx_backup="nextcloud_$now.tar.bz2"
+######### End user configurable variables #########
+
 # Change to Nextcloud docker-compose.yml directory
-cd /nextcloud/docker-compose/yml/location
+cd $dcd
 
 # Print Nextcloud stop message
 echo "Stopping Nextcloud"
@@ -10,34 +34,20 @@ echo "Stopping Nextcloud"
 # Stop Redis and Nextcloud
 docker-compose stop nextcloud && docker-compose stop redis
 
-# Backup PostgreSQL database.
+# Backup PostgreSQL database
 echo "Backing up Nextcloud database"
-now=$(date +"%m_%d_%Y")
-docker exec -i container_name pg_dump -U username database_name > /nextcloud/backup/directory/nextcloud-db_$now.sql
+docker exec -i container_name pg_dump -U username database_name > $dest/$db_backup
 
 # Print backup status message
 echo "Database backup finished with status $?"
 date
 echo
 
-# I'm using linuxserver.io's Nextcloud container with ``/data`` and ``/config`` persistent volumes.
-# Adjust these directories to meet your needs.
-# Nextcloud folders to backup:
-backup_files="/location/of/docker/nextcloud/data"
-backup_files_2="/location/of/docker/nextcloud/appdata"
-# Backup destination (adjust as needed):
-dest="/location/of/backups/nextcloud"
-
-# Backup file name:
-now=$(date +"%m_%d_%Y")
-# hostname=$(hostname -s)
-archive_file="nextcloud-$now.tar.bz2"
-
 # Print start message:
-echo "Backing up $backup_files to $dest/$archive_file"
+echo "Backing up Nextcloud data"
 
 # Backup files using tar
-tar cjf $dest/$archive_file $backup_files $backup_files_2
+tar cjf $dest/$nx_backup $backup_files $backup_files_2
 
 # Print end message:
 echo "Backup finished with status $?"
@@ -48,7 +58,7 @@ echo
 echo "Deleting old backups"
 
 # Delete backup files older than 1 day
-find /location/of/backups/nextcloud/nextcloud-*.tar.bz2 -maxdepth 1 -type f -mtime 1 -delete && find /location/of/backups/nextcloud/nextcloud-db_*.sql -maxdepth 1 -type f -mtime 1 -delete
+find $dest/nextcloud_*.tar.bz2 -maxdepth 1 -type f -mtime 1 -delete && find $dest/nextcloud-db_*.sql -maxdepth 1 -type f -mtime 1 -delete
 
 # Print file delete end message
 echo "Deletion finished with status $?"
