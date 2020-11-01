@@ -1,3 +1,5 @@
+# original source: https://old.reddit.com/r/NextCloud/comments/gvu8m3/nextcloud_docker_backup/
+
 #!/bin/bash -e
 echo "Moving to Nextcloud directory"
 
